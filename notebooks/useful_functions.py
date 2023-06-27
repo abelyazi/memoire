@@ -444,6 +444,55 @@ def build_dataset_df(rec_list, patient_list, patient_murmur):
                        'murmur': murmur_arr})
     return df
 
+# Output one array per patient.
+def create_rec_patient_list(data_f):
+    # Find the patient data files.
+    patient_files = find_patient_files(data_f)
+    num_patient_files = len(patient_files)
+
+    murmur_classes = ['Present', 'Absent']
+    num_murmur_classes = len(murmur_classes)
+    recordings = list()
+    murmurs = list()
+    id_list = list()
+
+    #outcomes = list()
+    for i in range(num_patient_files):
+        # Load the current patient data and recordings.
+        current_patient_data = load_patient_data(patient_files[i]) # load sex, height, weight, etc
+        current_recordings = load_recordings(data_f, current_patient_data) # convert recordings into signals
+        current_patient_id = get_patient_id(current_patient_data)
+
+        # Extract features.
+        current_features = get_location_array(current_patient_data,current_recordings)
+        #if len(current_recordings)!=0:
+            #current_features = current_recordings # we keep first element of a list of one element
+
+
+        # Extract labels and use one-hot encoding.
+        #current_murmur = np.zeros(num_murmur_classes, dtype=int)
+        current_murmur = 0
+        murmur = get_murmur(current_patient_data)
+        #if murmur in murmur_classes:
+        if murmur == "Present":
+            #j = murmur_classes.index(murmur)
+            #current_murmur[j] = 1
+            current_murmur=1
+
+        # Takes only in account patient that have a "Present" or "Absent" murmur.
+        if murmur != "Unknown" and len(current_recordings)!=0 :
+            murmurs.append(current_murmur)
+            recordings.append(current_features)
+            id_list.append(current_patient_id)
+
+    #features = np.asarray(features, dtype=np.float32)
+    #murmurs = np.asarray(murmurs, dtype=np.float32)
+
+
+    #X_train, X_test, y_train, y_test = train_test_split(features, murmurs, test_size=0.15, random_state=42)
+    #return X_train, X_test, y_train, y_test
+    return recordings,murmurs,id_list
+
 
 """
 def build_dataset_df(rec_list, patient_list, patient_murmur):
