@@ -9,6 +9,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 import random
 import pandas as pd
+from scipy import signal
 
 # Check if a variable is a number or represents a number.
 def is_number(x):
@@ -109,6 +110,7 @@ def load_recordings(data_folder, data, get_frequencies=False):
         recording_type = entries[0]
         filename = os.path.join(data_folder, recording_file)
         recording, frequency = load_wav_file(filename)
+        recording = signal.resample(recording, round(len(recording)/2))
         recordings.append(recording)
         frequencies.append(frequency)
 
@@ -393,7 +395,7 @@ def get_location_array(data, recordings):
     return features
 
 
-def build_dataset_df(rec_list, patient_list, patient_murmur):
+def build_dataset_df(rec_list, patient_list, patient_murmur,window_size):
     new_dict = {}
     new_dict[0] = 1
     new_dict[2] = 2
@@ -408,12 +410,12 @@ def build_dataset_df(rec_list, patient_list, patient_murmur):
     for h in range(len(patient_list)):
         for i in range(0, len(rec_list[h]), 2):
             if rec_list[h][i] == 1:
-                # Building 1) subarrays of size 4096 for each recording type 2) array for recording type 3) array for patient id
+                # Building 1) subarrays of size window_size for each recording type 2) array for recording type 3) array for patient id
                 array = rec_list[h][i + 1]
-                indices = [x for x in range(4096, len(array), 4096)]
+                indices = [x for x in range(window_size, len(array), window_size)]
                 sub_arr = np.split(array, indices)
                 length = len(sub_arr[-1])
-                nb_additional_zeros = 4096 - length
+                nb_additional_zeros = window_size - length
                 sub_arr[-1] = np.pad(sub_arr[-1], (0, nb_additional_zeros), 'constant')
                 nb_frames = len(sub_arr)
 
