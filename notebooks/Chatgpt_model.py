@@ -2,7 +2,7 @@ import tensorflow as tf
 
 def initial_convolution(input_tensor):
     # Initial convolution and max pooling
-    conv_layer = tf.keras.layers.Conv1D(filters=12, kernel_size=7, strides=2, activation='relu', padding='same')(input_tensor)
+    conv_layer = tf.keras.layers.Conv1D(filters=12, kernel_size=7, strides=2, padding='same')(input_tensor)
     maxpool_layer = tf.keras.layers.MaxPooling1D(pool_size=3, strides=2, padding='same')(conv_layer)
     
     return maxpool_layer
@@ -13,8 +13,8 @@ def composite_layer(input_tensor):
     intermediate_channels = input_tensor.shape[-1] * expansion_ratio
     
     # Point-wise convolution for channel expansion
-    input_tensor = tf.keras.layers.BatchNormalization()(input_tensor)
-    expanded_features = tf.keras.layers.Conv1D(filters=intermediate_channels, kernel_size=1, padding='same')(input_tensor)
+    bn = tf.keras.layers.BatchNormalization()(input_tensor)
+    expanded_features = tf.keras.layers.Conv1D(filters=intermediate_channels, kernel_size=1, padding='same')(bn)
     
     # Depth-wise convolution
     expanded_features = tf.keras.layers.BatchNormalization()(expanded_features)
@@ -60,12 +60,13 @@ def transition_block(input_tensor):
     # Transition block without dimension reduction
     bn = tf.keras.layers.BatchNormalization()(input_tensor)
     relu = tf.keras.layers.ReLU()(bn)
-    pconv = tf.keras.layers.Conv1D(filters=12, kernel_size=1, padding='same')(relu)
+    compress_ratio = input_tensor.shape[-1]/2
+    pconv = tf.keras.layers.Conv1D(filters=compress_ratio, kernel_size=1, padding='same')(relu)
     
     glob_pool = tf.keras.layers.GlobalAveragePooling1D()(pconv)
-    dense = tf.keras.layers.Dense(12)(glob_pool)
+    dense = tf.keras.layers.Dense(compress_ratio)(glob_pool)
     relu = tf.keras.layers.ReLU()(dense)
-    dense = tf.keras.layers.Dense(12)(relu)
+    dense = tf.keras.layers.Dense(compress_ratio)(relu)
     sigmoid = tf.keras.activations.sigmoid(dense)
     
     scale = tf.keras.layers.Multiply()([sigmoid, pconv])
@@ -105,10 +106,15 @@ def create_small_model(input_shape):
     # Merge squeezed features
     #merged_features = tf.keras.layers.concatenate([pooled_features1, pooled_features2, pooled_features3], axis=-1)
     
-    # Classification layer
-    x = tf.keras.layers.Dense(12)(merge_pool_1_23)
+    # Classification layers
+    x = tf.keras.layers.Dense(30)(merge_pool_1_23)
     x = tf.keras.layers.BatchNormalization()(x)
-    #x = tf.keras.layers.Dropout(0.3)(x)
+    x = tf.keras.layers.Dropout(0.1)(x)
+    
+    x = tf.keras.layers.Dense(15)(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.1)(x)
+    
     outputs = tf.keras.layers.Dense(1, activation='sigmoid')(x)
     
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
