@@ -114,6 +114,11 @@ def create_small_model(input_shape):
     x = tf.keras.layers.Dense(15)(x)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.Dropout(0.1)(x)
+ 
+    x = tf.keras.layers.Dense(10)(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    #x = tf.keras.layers.Dropout(0.1)(x)
+    
     
     outputs = tf.keras.layers.Dense(1, activation='sigmoid')(x)
     
@@ -121,39 +126,3 @@ def create_small_model(input_shape):
     return model
 
 
-def create_model(input_shape, num_classes):
-    inputs = tf.keras.Input(shape=input_shape)
-    
-    # Initial convolution and max pooling
-    maxpool_layer = initial_convolution(inputs)
-    
-    # Clique blocks
-    clique_block1 = clique_block(maxpool_layer)
-    transition_block1 = transition_block(clique_block1)
-    
-    clique_block2 = clique_block(transition_block1)
-    transition_block2 = transition_block(clique_block2)
-    
-    clique_block3 = clique_block(transition_block2)
-    
-    # Squeezed multi-scale representation
-    pooled_features1 = tf.keras.layers.GlobalAveragePooling1D()(clique_block1)
-    pooled_features2 = tf.keras.layers.GlobalAveragePooling1D()(clique_block2)
-    pooled_features3 = tf.keras.layers.GlobalAveragePooling1D()(clique_block3)
-    
-    # Merge squeezed features
-    merged_features = tf.keras.layers.concatenate([pooled_features1, pooled_features2, pooled_features3], axis=-1)
-    
-    # Classification layer
-    outputs = tf.keras.layers.Dense(num_classes, activation='softmax')(merged_features)
-    
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    return model
-
-# Create the model
-#input_shape = (input_length, num_channels)  # Replace with the actual input length and number of channels
-#num_classes = 10  # Replace with the actual number of classes
-#model = create_model(input_shape, num_classes)
-
-# Compile the model
-#model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy
